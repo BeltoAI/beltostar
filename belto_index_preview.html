@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="belto is building an SDK/runtime for deploying AI models to satellites and constrained edge systems." />
+  <title>belto — Deploy AI to the edge of space.</title>
+
+  <style>
+    :root {
+      --bg: #010205;
+      --text: #f6f8ff;
+      --muted: rgba(246, 248, 255, 0.66);
+      --muted-soft: rgba(246, 248, 255, 0.46);
+      --line: rgba(255, 255, 255, 0.11);
+      --line-strong: rgba(255, 255, 255, 0.18);
+      --blue: #8fc7ff;
+      --gold: #d8bd73;
+      --panel: rgba(255, 255, 255, 0.035);
+      --max: 1180px;
+      --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg);
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: #010205;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    .bg-photo {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(180deg, rgba(1, 2, 5, 0.52), rgba(1, 2, 5, 0.76)),
+        url("https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=2200&q=85");
+      background-size: cover;
+      background-position: center center;
+      transform: scale(1.035);
+      filter: brightness(0.42) contrast(1.08) saturate(0.78);
+    }
+
+    canvas#starfield {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.45;
+    }
+
+    .shooting-star {
+      position: fixed;
+      top: 12%;
+      left: -16vw;
+      width: 150px;
+      height: 2px;
+      z-index: 4;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate3d(0, 0, 0) rotate(-18deg);
+      background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0.14) 22%,
+        rgba(143,199,255,0.38) 60%,
+        rgba(255,255,255,0.92) 100%
+      );
+      border-radius: 999px;
+      box-shadow:
+        0 0 10px rgba(143,199,255,0.22),
+        0 0 22px rgba(255,255,255,0.10);
+      will-change: transform, opacity;
+    }
+
+    .shooting-star::after {
+      content: "";
+      position: absolute;
+      right: -2px;
+      top: 50%;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      transform: translateY(-50%);
+      background: #fff;
+      box-shadow:
+        0 0 10px rgba(255,255,255,0.72),
+        0 0 24px rgba(143,199,255,0.32);
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    body::before {
+      background:
+        radial-gradient(circle at 74% 16%, rgba(143, 199, 255, 0.045), transparent 20%),
+        radial-gradient(ellipse at 50% 118%, rgba(83, 136, 255, 0.18), transparent 32%),
+        radial-gradient(ellipse at 50% 124%, rgba(255, 255, 255, 0.10), transparent 24%),
+        linear-gradient(to bottom, rgba(1, 2, 5, 0.08), rgba(1, 2, 5, 0.58) 58%, rgba(1, 2, 5, 0.90));
+    }
+
+    body::after {
+      background: linear-gradient(180deg, rgba(1,2,5,0.04), rgba(1,2,5,0.20) 50%, rgba(1,2,5,0.46));
+      opacity: 0.62;
+    }
+
+    @keyframes starDrift {
+      from { transform: translate3d(0, 0, 0); }
+      to { transform: translate3d(-90px, 70px, 0); }
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+
+    .shell {
+      width: min(var(--max), calc(100% - 42px));
+      margin: 0 auto;
+    }
+
+    .credibility,
+    main,
+    footer {
+      position: relative;
+      z-index: 5;
+    }
+
+    .credibility {
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      color: rgba(246,248,255,0.52);
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 11px 18px;
+      background: rgba(2,3,8,0.64);
+      backdrop-filter: blur(14px);
+    }
+
+    .nav-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: rgba(2,3,8,0.62);
+      backdrop-filter: blur(18px);
+    }
+
+    nav {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 620;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-mark {
+      width: 29px;
+      height: 29px;
+      border-radius: 8px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .brand-fallback {
+      display: none;
+      font-size: 16px;
+    }
+
+    .brand-name {
+      font-size: 15px;
+      color: rgba(255,255,255,0.9);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      color: rgba(246,248,255,0.62);
+      font-size: 13px;
+    }
+
+    .nav-links a {
+      transition: color 220ms var(--ease);
+    }
+
+    .nav-links a:hover {
+      color: #fff;
+    }
+
+    section {
+      position: relative;
+      padding: 118px 0;
+    }
+
+    .hero {
+      min-height: calc(100vh - 110px);
+      display: grid;
+      align-items: center;
+      padding: 126px 0 110px;
+    }
+
+    .hero-inner {
+      max-width: 920px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(246,248,255,0.64);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 34px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--blue), transparent);
+    }
+
+    h1 {
+      font-size: clamp(56px, 9vw, 118px);
+      line-height: 0.92;
+      letter-spacing: -0.075em;
+      font-weight: 650;
+      max-width: 960px;
+    }
+
+    .hero p {
+      max-width: 760px;
+      margin-top: 30px;
+      color: var(--muted);
+      font-size: clamp(18px, 2vw, 23px);
+      line-height: 1.55;
+      letter-spacing: -0.015em;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 42px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.13);
+      color: rgba(255,255,255,0.86);
+      background: rgba(255,255,255,0.035);
+      transition: transform 220ms var(--ease), border-color 220ms var(--ease), background 220ms var(--ease), color 220ms var(--ease);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,0.28);
+      background: rgba(255,255,255,0.07);
+      color: #fff;
+    }
+
+    .btn.primary {
+      color: #05101d;
+      border-color: rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.92);
+    }
+
+    .btn.primary:hover {
+      background: #fff;
+    }
+
+    .section-head {
+      max-width: 720px;
+      margin-bottom: 54px;
+    }
+
+    .kicker {
+      color: var(--gold);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    h2 {
+      font-size: clamp(34px, 5vw, 66px);
+      line-height: 1.02;
+      letter-spacing: -0.055em;
+      font-weight: 620;
+    }
+
+    .section-head p,
+    .lead {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 18px;
+      max-width: 700px;
+    }
+
+    .three-cols {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 34px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 36px 0;
+    }
+
+    .text-col {
+      padding-right: 26px;
+    }
+
+    .text-col + .text-col {
+      border-left: 1px solid rgba(255,255,255,0.08);
+      padding-left: 34px;
+    }
+
+    .text-col span,
+    .step span {
+      display: block;
+      color: rgba(143,199,255,0.82);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 19px;
+      letter-spacing: -0.02em;
+      font-weight: 560;
+      margin-bottom: 10px;
+    }
+
+    .text-col p,
+    .step p,
+    .capability p {
+      color: var(--muted-soft);
+      font-size: 15px;
+    }
+
+    .solution-grid {
+      display: block;
+      max-width: 880px;
+    }
+
+    .solution-points {
+      display: grid;
+      gap: 24px;
+      margin-top: 34px;
+      padding-top: 28px;
+      border-top: 1px solid var(--line);
+    }
+
+    .solution-point {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      gap: 22px;
+      color: var(--muted);
+    }
+
+    .solution-point strong {
+      color: rgba(255,255,255,0.86);
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 520;
+    }
+
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      position: relative;
+      border-top: 1px solid var(--line-strong);
+      margin-top: 60px;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      top: -1px;
+      left: 0;
+      width: 68%;
+      height: 1px;
+      background: linear-gradient(90deg, var(--blue), rgba(216,189,115,0.55), transparent);
+    }
+
+    .step {
+      padding: 36px 30px 0 0;
+      min-height: 170px;
+      position: relative;
+    }
+
+    .step::before {
+      content: "";
+      position: absolute;
+      top: -5px;
+      left: 0;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 22px rgba(143,199,255,0.52);
+    }
+
+    .use-cases {
+      overflow: hidden;
+    }
+
+    .case-row {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(250px, 1fr));
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      scroll-snap-type: x mandatory;
+    }
+
+    .case-row::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .case-row::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.18);
+      border-radius: 999px;
+    }
+
+    .case-card {
+      scroll-snap-align: start;
+      min-height: 340px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 26px;
+      overflow: hidden;
+      position: relative;
+      background: #050812;
+      transition: transform 260ms var(--ease), border-color 260ms var(--ease);
+    }
+
+    .case-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    .case-card img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.52;
+      filter: saturate(0.86) contrast(1.04);
+      transition: transform 600ms var(--ease), opacity 260ms var(--ease);
+    }
+
+    .case-card:hover img {
+      transform: scale(1.035);
+      opacity: 0.62;
+    }
+
+    .case-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(2,3,8,0.94), rgba(2,3,8,0.22) 58%, rgba(2,3,8,0.28));
+    }
+
+    .case-content {
+      position: absolute;
+      z-index: 2;
+      left: 22px;
+      right: 22px;
+      bottom: 22px;
+    }
+
+    .case-content p {
+      margin-top: 9px;
+      color: rgba(246,248,255,0.58);
+      font-size: 14px;
+    }
+
+    .product-grid {
+      display: block;
+      max-width: 880px;
+    }
+
+    .capabilities {
+      display: grid;
+      gap: 24px;
+      margin-top: 34px;
+    }
+
+    .capability {
+      border-top: 1px solid var(--line);
+      padding-top: 22px;
+    }
+
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: 0.8fr 1.2fr;
+      gap: 58px;
+      align-items: center;
+    }
+
+    .screenshot-placeholder {
+      min-height: 380px;
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 30px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
+        rgba(2,3,8,0.72);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 34px 130px rgba(0,0,0,0.34);
+    }
+
+    .screenshot-placeholder::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 46px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.025);
+    }
+
+    .screenshot-placeholder::after {
+      content: "Future belto demo screenshot";
+      position: absolute;
+      inset: 46px 0 0;
+      display: grid;
+      place-items: center;
+      color: rgba(246,248,255,0.34);
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .window-dots {
+      position: absolute;
+      top: 17px;
+      left: 18px;
+      display: flex;
+      gap: 7px;
+      z-index: 2;
+    }
+
+    .window-dots i {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.18);
+    }
+
+    .research-contact {
+      padding-top: 96px;
+      padding-bottom: 96px;
+    }
+
+    .research-panel,
+    .final-cta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 30px;
+      padding: 0;
+      border: 0;
+    }
+
+    .research-panel {
+      margin-bottom: 74px;
+    }
+
+    .research-panel p,
+    .final-cta p {
+      color: var(--muted);
+      max-width: 620px;
+      margin-top: 8px;
+    }
+
+    footer {
+      padding: 44px 0 58px;
+      color: rgba(246,248,255,0.44);
+      font-size: 13px;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 28px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a:hover {
+      color: #fff;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 800ms var(--ease), transform 800ms var(--ease);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      .nav-links {
+        gap: 14px;
+        font-size: 12px;
+      }
+
+      .nav-links a:nth-child(2),
+      .nav-links a:nth-child(3) {
+        display: none;
+      }
+
+      section {
+        padding: 88px 0;
+      }
+
+      .hero {
+        min-height: auto;
+        padding: 96px 0 88px;
+      }
+
+      .three-cols,
+      .solution-grid,
+      .product-grid,
+      .demo-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .text-col + .text-col {
+        border-left: 0;
+        padding-left: 0;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        padding-top: 28px;
+      }
+
+      .timeline {
+        grid-template-columns: 1fr;
+        border-top: 0;
+        border-left: 1px solid var(--line-strong);
+        margin-left: 5px;
+      }
+
+      .timeline::before {
+        top: 0;
+        left: -1px;
+        width: 1px;
+        height: 70%;
+        background: linear-gradient(180deg, var(--blue), rgba(216,189,115,0.55), transparent);
+      }
+
+      .step {
+        padding: 0 0 34px 32px;
+        min-height: 0;
+      }
+
+      .step::before {
+        top: 4px;
+        left: -5px;
+      }
+
+      .research-panel,
+      .final-cta,
+      .footer-inner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .research-panel {
+        margin-bottom: 58px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .shell {
+        width: min(var(--max), calc(100% - 28px));
+      }
+
+      .credibility {
+        font-size: 9px;
+        letter-spacing: 0.14em;
+      }
+
+      nav {
+        height: 64px;
+      }
+
+      .brand-name {
+        display: none;
+      }
+
+      .nav-links {
+        gap: 12px;
+      }
+
+      .nav-links a:nth-child(1),
+      .nav-links a:nth-child(2),
+      .nav-links a:nth-child(3) {
+        display: none;
+      }
+
+      h1 {
+        font-size: clamp(48px, 17vw, 72px);
+      }
+
+      .hero p {
+        font-size: 17px;
+      }
+
+      .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .case-row {
+        grid-template-columns: repeat(7, 260px);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-photo" aria-hidden="true"></div>
+  <canvas id="starfield" aria-hidden="true"></canvas>
+  <div class="shooting-star" aria-hidden="true"></div>
+
+  <div class="credibility">TiE • ExCITE • NVIDIA Inception • Intel Partner Alliance</div>
+
+  <header class="nav-wrap">
+    <nav class="shell" aria-label="Primary navigation">
+      <a class="brand" href="#top" aria-label="belto home">
+        <img class="brand-mark" src="logo.png" alt="belto logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'; this.parentElement.querySelector('.brand-name').style.display='none';" />
+        <span class="brand-fallback">belto</span>
+        <span class="brand-name">belto</span>
+      </a>
+      <div class="nav-links">
+        <a href="#problem">Problem</a>
+        <a href="#solution">Solution</a>
+        <a href="#product">Product</a>
+        <a href="#research">Research</a>
+        <a href="demo.html">Login</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="shell hero-inner reveal">
+        <div class="eyebrow">Orbital edge AI runtime</div>
+        <h1>Deploy AI to the edge of space.</h1>
+        <p>belto lets satellite operators run AI models onboard constrained orbital hardware, turning raw sensor data into compact mission-ready insights before downlink.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="https://calendly.com/emil-shirokikh-belto/30min" target="_blank" rel="noopener">Schedule Demo</a>
+          <a class="btn" href="https://zenodo.org/records/19207086" target="_blank" rel="noopener">View Research</a>
+          <a class="btn" href="demo.html">Login to Demo</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="problem">
+      <div class="shell">
+        <div class="section-head reveal">
+          <div class="kicker">Problem</div>
+          <h2>Orbital systems collect more data than they can efficiently move.</h2>
+          <p>Satellites operate under hard constraints: limited bandwidth, intermittent downlink, power budgets, memory limits, and mission-critical timing.</p>
+        </div>
+
+        <div class="three-cols reveal">
+          <div class="text-col">
+            <span>01</span>
+            <h3>Massive sensor data</h3>
+            <p>Earth observation, telemetry, and onboard sensors can produce more raw data than operators can downlink quickly.</p>
+          </div>
+          <div class="text-col">
+            <span>02</span>
+            <h3>Limited downlink</h3>
+            <p>Connectivity windows are constrained, intermittent, and expensive to use for raw data that may not be mission-relevant.</p>
+          </div>
+          <div class="text-col">
+            <span>03</span>
+            <h3>Delayed processing</h3>
+            <p>Cloud-first workflows force teams to wait until data reaches the ground before extracting operational insight.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="solution">
+      <div class="shell solution-grid">
+        <div class="reveal">
+          <div class="kicker">Solution</div>
+          <h2>Process onboard. Downlink what matters.</h2>
+          <p class="lead">belto packages models, rules, and mission constraints into deployable jobs that can run on constrained edge systems.</p>
+
+          <div class="solution-points">
+            <div class="solution-point">
+              <strong>Onboard</strong>
+              <p>Run AI workflows close to the sensor, before raw data leaves the spacecraft or remote system.</p>
+            </div>
+            <div class="solution-point">
+              <strong>Compact</strong>
+              <p>Transmit structured alerts, detections, summaries, and prioritized outputs instead of unnecessary raw data.</p>
+            </div>
+            <div class="solution-point">
+              <strong>Bounded</strong>
+              <p>Define jobs around mission constraints for bandwidth, latency, power, memory, and operating context.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="workflow">
+      <div class="shell">
+        <div class="section-head reveal">
+          <div class="kicker">Workflow</div>
+          <h2>A clean mission pipeline from model to insight.</h2>
+        </div>
+
+        <div class="timeline reveal">
+          <div class="step">
+            <span>01</span>
+            <h3>Deploy model</h3>
+            <p>Package model artifacts with rules, thresholds, and mission constraints.</p>
+          </div>
+          <div class="step">
+            <span>02</span>
+            <h3>Process onboard</h3>
+            <p>Run inference and logic against sensor or telemetry streams near the source.</p>
+          </div>
+          <div class="step">
+            <span>03</span>
+            <h3>Compress output</h3>
+            <p>Reduce raw signals into compact, structured mission outputs.</p>
+          </div>
+          <div class="step">
+            <span>04</span>
+            <h3>Transmit insight</h3>
+            <p>Prioritize detections, alerts, and summaries for downlink.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="use-cases" class="use-cases">
+      <div class="shell">
+        <div class="section-head reveal">
+          <div class="kicker">Use cases</div>
+          <h2>AI workflows for constrained orbital and remote environments.</h2>
+          <p>belto is designed for workflows where insight is more valuable than raw volume.</p>
+        </div>
+
+        <div class="case-row reveal">
+          <article class="case-card">
+            <img src="https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=900&q=80" alt="Earth from orbit" />
+            <div class="case-content"><h3>Earth observation filtering</h3><p>Identify useful frames before downlinking full sensor captures.</p></div>
+          </article>
+          <article class="case-card">
+            <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80" alt="Remote terrain" />
+            <div class="case-content"><h3>Wildfire detection</h3><p>Flag likely wildfire signatures for faster operational awareness.</p></div>
+          </article>
+          <article class="case-card">
+            <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=900&q=80" alt="Ocean horizon" />
+            <div class="case-content"><h3>Vessel detection</h3><p>Prioritize maritime detections and regions of interest.</p></div>
+          </article>
+          <article class="case-card">
+            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=900&q=80" alt="Network and Earth visualization" />
+            <div class="case-content"><h3>Telemetry anomaly detection</h3><p>Surface unusual signals from onboard telemetry streams.</p></div>
+          </article>
+          <article class="case-card">
+            <img src="https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=900&q=80" alt="Mission operations" />
+            <div class="case-content"><h3>Predictive threat alerts</h3><p>Detect patterns that may indicate operational risk.</p></div>
+          </article>
+          <article class="case-card">
+            <img src="https://images.unsplash.com/photo-1517976487492-5750f3195933?auto=format&fit=crop&w=900&q=80" alt="Rocket launch" />
+            <div class="case-content"><h3>Autonomous downlink prioritization</h3><p>Choose what should be transmitted first during narrow windows.</p></div>
+          </article>
+          <article class="case-card">
+            <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=900&q=80" alt="Remote environment" />
+            <div class="case-content"><h3>Degraded communications</h3><p>Keep AI workflows useful when links are limited or intermittent.</p></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="product">
+      <div class="shell product-grid">
+        <div class="reveal">
+          <div class="kicker">Product</div>
+          <h2>An SDK/runtime for mission-constrained AI deployment.</h2>
+          <p class="lead">belto packages models, rules, and mission constraints into deployment jobs optimized for bandwidth, latency, power, and memory.</p>
+
+          <div class="capabilities">
+            <div class="capability">
+              <h3>Mission package builder</h3>
+              <p>Bundle AI models, preprocessing rules, thresholds, metadata, and mission limits into a single deployable package.</p>
+            </div>
+            <div class="capability">
+              <h3>Runtime simulation</h3>
+              <p>Test expected behavior against constrained compute, memory, latency, and bandwidth assumptions before deployment.</p>
+            </div>
+            <div class="capability">
+              <h3>Mission logs</h3>
+              <p>Inspect what ran, what was detected, what was compressed, and what would be transmitted.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="demo">
+      <div class="shell demo-grid">
+        <div class="reveal">
+          <div class="kicker">Demo</div>
+          <h2>Simulate a mission package before the real screenshot lands.</h2>
+          <p class="lead">Login to the belto demo to deploy an AI package to a simulated satellite and inspect mission logs.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="demo.html">Login to Demo</a>
+          </div>
+        </div>
+
+        <div class="screenshot-placeholder reveal">
+          <div class="window-dots"><i></i><i></i><i></i></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="research" class="research-contact">
+      <div class="shell">
+        <div class="research-panel reveal">
+          <div>
+            <div class="kicker">Research</div>
+            <h2>Technical grounding for orbital edge AI.</h2>
+            <p>Read the belto research record for additional context on the technical direction behind the platform.</p>
+          </div>
+          <a class="btn primary" href="https://zenodo.org/records/19207086" target="_blank" rel="noopener">View Research</a>
+        </div>
+
+        <div class="final-cta reveal">
+          <div>
+            <div class="kicker">Contact</div>
+            <h2>Testing AI workflows for satellites or remote infrastructure?</h2>
+            <p>belto is built for teams exploring onboard intelligence, constrained inference, and mission-ready edge AI workflows.</p>
+          </div>
+          <a class="btn primary" href="https://calendly.com/emil-shirokikh-belto/30min" target="_blank" rel="noopener">Schedule Demo</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell footer-inner">
+      <div>
+        <strong style="color: rgba(255,255,255,0.82); font-weight: 560;">belto</strong>
+        <span style="margin-left: 12px;">Orbital Edge AI SDK</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://zenodo.org/records/19207086" target="_blank" rel="noopener">Research</a>
+        <a href="https://calendly.com/emil-shirokikh-belto/30min" target="_blank" rel="noopener">Schedule Demo</a>
+        <a href="demo.html">Login</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const reveals = document.querySelectorAll('.reveal');
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+
+    reveals.forEach((el) => observer.observe(el));
+
+    const canvas = document.getElementById('starfield');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+    let width = 0;
+    let height = 0;
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let frame;
+
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function createStars() {
+      const count = Math.max(140, Math.floor((width * height) / 10000));
+      stars = [];
+      for (let i = 0; i < count; i++) {
+        stars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          r: Math.random() < 0.84 ? random(0.45, 1.2) : random(1.2, 2.15),
+          baseA: random(0.10, 0.58),
+          speed: random(0.004, 0.018),
+          drift: random(0.002, 0.008),
+          t: random(0, Math.PI * 2),
+          tone: Math.random()
+        });
+      }
+    }
+
+    function resizeCanvas() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      createStars();
+    }
+
+    function drawStars() {
+      ctx.clearRect(0, 0, width, height);
+
+      for (const s of stars) {
+        s.t += s.speed;
+        s.y += s.drift;
+        if (s.y > height + 2) {
+          s.y = -2;
+          s.x = Math.random() * width;
+        }
+
+        const twinkle = (Math.sin(s.t) + 1) * 0.5;
+        const alpha = s.baseA * (0.58 + twinkle * 0.42);
+
+        if (s.tone > 0.95) ctx.fillStyle = `rgba(216, 189, 115, ${alpha * 0.82})`;
+        else if (s.tone > 0.84) ctx.fillStyle = `rgba(143, 199, 255, ${alpha})`;
+        else ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      frame = requestAnimationFrame(drawStars);
+    }
+
+    window.addEventListener('resize', () => {
+      cancelAnimationFrame(frame);
+      resizeCanvas();
+      drawStars();
+    });
+
+    resizeCanvas();
+    drawStars();
+
+    const shootingStar = document.querySelector('.shooting-star');
+
+    function updateShootingStar() {
+      const scrollTop = window.scrollY || window.pageYOffset;
+      const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      const progress = Math.min(Math.max(scrollTop / maxScroll, 0), 1);
+      const activeStart = 0.06;
+      const activeEnd = 0.78;
+
+      if (progress < activeStart || progress > activeEnd) {
+        shootingStar.style.opacity = '0';
+        return;
+      }
+
+      const local = (progress - activeStart) / (activeEnd - activeStart);
+      const x = -16 + local * 128;
+      const y = 8 + local * 38;
+      const opacity = Math.sin(local * Math.PI) * 0.82;
+
+      shootingStar.style.opacity = opacity.toFixed(3);
+      shootingStar.style.transform = `translate3d(${x}vw, ${y}vh, 0) rotate(-18deg)`;
+    }
+
+    window.addEventListener('scroll', updateShootingStar, { passive: true });
+    window.addEventListener('resize', updateShootingStar);
+    updateShootingStar();
+  </script>
+</body>
+</html>
